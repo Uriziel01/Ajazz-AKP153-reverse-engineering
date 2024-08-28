@@ -42,7 +42,7 @@ sys.stdout.write('Decimal VendorID=' + str(dev.idVendor) + ' & ProductID=' + str
 sys.stdout.write('Hexadecimal VendorID=' + hex(dev.idVendor) + ' & ProductID=' + hex(dev.idProduct) + '\n\n')
 
 #Some test code to check if the concept works
-action = 'copied_image_upload'
+action = 'set_screen_brightness'
 match action:
     case 'read_key_event':
       payload = bytearray(512)
@@ -51,7 +51,8 @@ match action:
       print("PRESSED KEY: {:02x}".format(states[9])) #it is indexed starting from bottom right corner (code 1) to left bottom corner (code 15)
     case 'set_screen_brightness':
         payload = bytearray(512)
-        payload[0:13] = [0x43, 0x52, 0x54, 0x00, 0x00, 0x4C, 0x49, 0x47,  0x00, 0x00, 0x64, 0x00, 0x00]
+        brightness  = 0x64
+        payload[0:13] = [0x43, 0x52, 0x54, 0x00, 0x00, 0x4C, 0x49, 0x47,  0x00, 0x00, brightness, 0x00, 0x00]
         ep_out.write(payload)
     case 'set_key_image':
         payload = bytearray(512)
