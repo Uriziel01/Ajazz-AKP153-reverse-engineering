@@ -40,34 +40,50 @@ print(ep_in)
 
 sys.stdout.write('Decimal VendorID=' + str(dev.idVendor) + ' & ProductID=' + str(dev.idProduct) + '\n')
 sys.stdout.write('Hexadecimal VendorID=' + hex(dev.idVendor) + ' & ProductID=' + hex(dev.idProduct) + '\n\n')
+commandInitBytes = bytearray([0x43, 0x52, 0x54, 0x00, 0x00])
+
+def writeData(payloadData, commandKey = False, printData = False):
+    payload = bytearray(512)
+    byteOffset = 0
+    if commandKey:
+        commandPrefix = bytearray(commandInitBytes) + bytearray(commandKey) + bytearray([0x00, 0x00])
+        payload[:len(commandPrefix)] = commandPrefix
+        byteOffset = len(commandPrefix)
+    payload[byteOffset:len(payloadData)] = payloadData
+    if printData:
+        print(payload)
+    ep_out.write(payload)
+
+def readData(printData = False):
+    data = ep_in.read(size_or_buffer=512, timeout=5000)
+    if printData:
+        print(data)
+    return data
 
 #Some test code to check if the concept works
-action = 'set_screen_brightness'
+action = 'set_key_image'
 match action:
+    case 'clear_screen_bootlogo':
+        writeData([0x00, 0x43], commandKey = [0x43, 0x4c, 0x45], printData = True)
+    case 'clear_screen_empty':
+        writeData([0x00, 0xff], commandKey = [0x43, 0x4c, 0x45], printData = True)
     case 'read_key_event':
-      payload = bytearray(512)
-      states = ep_in.read(size_or_buffer=512, timeout=5000)
-      print(states)
-      print("PRESSED KEY: {:02x}".format(states[9])) #it is indexed starting from bottom right corner (code 1) to left bottom corner (code 15)
+      states = readData(True)
+      print("PRESSED KEY: {:02x}".format(states[9])) #it is indexed starting from top right corner (code 01) to left bottom corner (code 15)
     case 'set_screen_brightness':
-        payload = bytearray(512)
-        brightness  = 0x64
-        payload[0:13] = [0x43, 0x52, 0x54, 0x00, 0x00, 0x4C, 0x49, 0x47,  0x00, 0x00, brightness, 0x00, 0x00]
-        ep_out.write(payload)
+        brightness  = 0x30 #0x64 = 100%
+        writeData([brightness], commandKey = [0x4C, 0x49, 0x47], printData = True)
     case 'set_key_image':
-        payload = bytearray(512)
-        payload[0:13] = [0x43, 0x52, 0x54, 0x00, 0x00, 0x42, 0x41, 0x54, 0x00, 0x00, 0x19, 0x3f, 0x0d]
-        ep_out.write(payload)
+        keyId = 0x0d
+        writeData([0x19, 0x3f, keyId], commandKey = [0x42, 0x41, 0x54])
         with open("img2.jpg", "rb") as image: #85x85 pixels JPEG
             while 1:
                 byte_s = image.read(512)
                 if not byte_s:
                     break
-                ep_out.write(byte_s)
-        
-        payload = bytearray(512)
-        payload[0:13] = [0x43, 0x52, 0x54, 0x00, 0x00, 0x53, 0x54, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00]
-        ep_out.write(payload)
+                writeData(byte_s)
+
+        writeData([0x00, 0x00], commandKey = [0x53, 0x54, 0x50])
     case  'copied_image_upload':
         payload = bytearray(512)
         payload[0:13] = [0x43, 0x52, 0x54, 0x00, 0x00, 0x42, 0x41, 0x54, 0x00, 0x00, 0x19, 0x3f, 0x0d]
